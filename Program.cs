@@ -1,4 +1,4 @@
-﻿
+
 namespace StudentGit;
 
 using System;
@@ -43,6 +43,29 @@ public class Program
         Console.Clear();
         AnsiConsole.Write(new Rule("[cyan]✦ StudentGit Engine v2.0[/]").LeftJustified().RuleStyle("grey"));
         AnsiConsole.MarkupLine("[grey]Dev Environment | SDE Pipeline Readiness[/]\n");
+    }
+
+    // Helper method to prompt for optional PAT token for remote operations
+    private static string? PromptForPatToken()
+    {
+        bool usePat = AnsiConsole.Confirm("[white]Do you need to use a Personal Access Token (PAT) for authentication?[/]");
+        
+        if (usePat)
+        {
+            return AnsiConsole.Prompt(
+                new TextPrompt<string>("[white]Enter your GitHub PAT token:[/]")
+                    .Secret() // Hide input for security
+                    .Validate(input =>
+                    {
+                        if (string.IsNullOrWhiteSpace(input))
+                            return ValidationResult.Error("[red]Error: Token cannot be empty.[/]");
+                        if (input.Length < 20)
+                            return ValidationResult.Error("[red]Error: Token seems too short (min 20 chars).[/]");
+                        return ValidationResult.Success();
+                    }));
+        }
+
+        return null;
     }
 
     private static void HandleCommand(string choice)
@@ -178,7 +201,8 @@ public class Program
                 if (optionNumber == "16")
                 {
                     string folder = AnsiConsole.Ask<string>("[white]Enter target local folder name:[/] ");
-                    result = GitEngine.CloneRepository(sanitizedUrl, folder);
+                    string? patToken = PromptForPatToken();
+                    result = GitEngine.CloneRepository(sanitizedUrl, folder, patToken);
                 }
                 else
                 {
@@ -188,17 +212,20 @@ public class Program
                 break;
 
             case "18":
-                result = GitEngine.FetchUpdates();
+                string? fetchPat = PromptForPatToken();
+                result = GitEngine.FetchUpdates(fetchPat);
                 RenderOutput(result);
                 break;
 
             case "19":
-                result = GitEngine.PullUpdates();
+                string? pullPat = PromptForPatToken();
+                result = GitEngine.PullUpdates(pullPat);
                 RenderOutput(result);
                 break;
 
             case "20":
-                result = GitEngine.PushChanges();
+                string? pushPat = PromptForPatToken();
+                result = GitEngine.PushChanges(pushPat);
                 RenderOutput(result);
                 break;
 
