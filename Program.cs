@@ -1,6 +1,7 @@
 ﻿
 namespace StudentGit;
 
+using System.Diagnostics;
 using System;
 using System.IO;
 using Spectre.Console;
@@ -9,6 +10,34 @@ public class Program
 {
     public static void Main(string[] args)
     {
+        if (!GitEnvironmentManager.IsGitInstalled())
+        {
+            AnsiConsole.MarkupLine("[yellow][!] Git environment dependency is missing from this system.[/]");
+
+            bool installSuccess = AnsiConsole.Status()
+                .Spinner(Spinner.Known.Dots)
+                .SpinnerStyle(Style.Parse("cyan"))
+                .Start("[cyan]Auto-repairing environment: Running silent installation via winget...[/]", ctx =>
+                {
+                    return GitEnvironmentManager.InstallGitSilently();
+                });
+
+            if (installSuccess)
+            {
+                AnsiConsole.MarkupLine("[green][+] Git successfully installed. Initializing path structures...[/]");
+
+                string oldPath = Environment.GetEnvironmentVariable("PATH", EnvironmentVariableTarget.Machine) ?? "";
+
+                Environment.SetEnvironmentVariable("PATH", oldPath, EnvironmentVariableTarget.Process);
+            }
+            else
+            {
+                AnsiConsole.MarkupLine("[red][X] Error: Could not automatically resolve Git installation via winget.[/]");
+                AnsiConsole.MarkupLine("[grey]Please manually install Git from git-scm.com and restart the tool.[/]");
+                return;
+            }
+        }
+
         while (true)
         {
             RenderHeader();
@@ -374,5 +403,4 @@ public class Program
         }
         catch { }
     }
-
 }

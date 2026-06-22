@@ -440,7 +440,17 @@ public class GitEngine
                 result.Message = "No remote server linked. Run 'git remote add' first.";
                 return result;
             }
-            Commands.Fetch(repo, remote.Name, new string[0], null, null);
+
+            // === CREDENTIAL BLOCK ADDED HERE ===
+            var fetchOptions = new FetchOptions
+            {
+                CredentialsProvider = (url, user, types) => AutoResolveGitCredentials(url)
+            };
+            // ===================================
+
+            // Replaced the 4th argument (null) with fetchOptions
+            Commands.Fetch(repo, remote.Name, new string[0], fetchOptions, null);
+
             result.IsSuccess = true;
             result.Message = "Fetched the latest change logs from the remote repository.";
             result.StandardGitCommand = "git fetch";
@@ -458,7 +468,17 @@ public class GitEngine
         try
         {
             var author = new Signature("Student Dev", "student@example.com", DateTimeOffset.Now);
-            var options = new PullOptions();
+
+            // === CREDENTIAL BLOCK ADDED HERE ===
+            var options = new PullOptions
+            {
+                FetchOptions = new FetchOptions
+                {
+                    CredentialsProvider = (url, user, types) => AutoResolveGitCredentials(url)
+                }
+            };
+            // ===================================
+
             MergeResult mergeResult = Commands.Pull(repo, author, options);
 
             result.IsSuccess = true;
@@ -470,8 +490,10 @@ public class GitEngine
         catch (Exception ex) { result.IsSuccess = false; result.Message = $"Error: {ex.Message}"; return result; }
     }
 
+
     // 20. git push
-    public static GitResult PushChanges()
+    // 20. git push
+    public static GitResult PushChanges(string personalAccessToken = "")
     {
         var result = new GitResult();
         using var repo = new Repository(RepoPath);
@@ -482,20 +504,30 @@ public class GitEngine
             {
                 result.IsSuccess = false;
                 result.Message = "No remote target found to push to.";
+                result.TrainerTip = "Run 'git remote add origin <url>' first to link your remote repository.";
                 return result;
             }
 
-            var options = new PushOptions
-            {
-                // This handles the authentication in the background automatically
-                CredentialsProvider = (url, userFromUrl, types) => new UsernamePasswordCredentials
-                {
-                    Username = "token",
-                    Password = "PASTE_YOUR_TOKEN_HERE" // Put your token here
-                }
-            };
+            var options = new PushOptions();
 
-            repo.Network.Push(remote, @"refs/heads/main:refs/heads/main", options);
+            // Configure authentication: use PAT if provided, otherwise auto-resolve from Windows GCM
+            if (!string.IsNullOrEmpty(personalAccessToken))
+            {
+                options.CredentialsProvider = (_url, _user, _cred) =>
+                    new UsernamePasswordCredentials
+                    {
+                        Username = "oauth2",  // GitHub uses "oauth2" as username for PAT
+                        Password = personalAccessToken
+                    };
+            }
+            // === AUTO-AUTH FALLBACK ADDED HERE ===
+            else
+            {
+                options.CredentialsProvider = (url, user, types) => AutoResolveGitCredentials(url);
+            }
+            // =====================================
+
+            repo.Network.Push(remote, @"refs/heads/main", options);
 
             result.IsSuccess = true;
             result.Message = "Uploaded local commits safely to the remote cloud server.";
@@ -503,7 +535,71 @@ public class GitEngine
             result.TrainerTip = "Push sends your local saved checkpoints up to the shared workspace cloud.";
             return result;
         }
-        catch (Exception ex) { result.IsSuccess = false; result.Message = $"Error: {ex.Message}"; return result; }
+        catch (Exception ex)
+        {
+            result.IsSuccess = false;
+            result.Message = $"Error: {ex.Message}";
+            result.TrainerTip = "Make sure your PAT is valid and has 'repo' permissions. Check GitHub Settings → Developer Settings → Personal Access Tokens.";
+            return result;
+        }
     }
+    private static LibGit2Sharp.Credentials? AutoResolveGitCredentials(string url)
+    {
+        try
+        {
+            // Explicitly defining System.Diagnostics to bypass missing using errors
+            var startInfo = new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = "git.exe",
+                Arguments = "credential fill",
+                UseShellExecute = false,
+                RedirectStandardInput = true,
+                RedirectStandardOutput = true,
+                CreateNoWindow = true
+            };
+
+            using (var process = new System.Diagnostics.Process { StartInfo = startInfo })
+            {
+                process.Start();
+
+                using (var writer = process.StandardInput)
+                {
+                    writer.WriteLine($"url={url}");
+                }
+
+                string? username = null;
+                string? password = null;
+
+                using (var reader = process.StandardOutput)
+                {
+                    string? line;
+                    while ((line = reader.ReadLine()) != null)
+                    {
+                        if (line!.StartsWith("username=")) username = line.Substring(9).Trim();
+                        if (line!.StartsWith("password=")) password = line.Substring(9).Trim();
+                    }
+                }
+
+                process.WaitForExit();
+
+                if (!string.IsNullOrEmpty(username) && !string.IsNullOrEmpty(password))
+                {
+                    return new LibGit2Sharp.UsernamePasswordCredentials
+                    {
+                        Username = username,
+                        Password = password
+                    };
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[GitEngine] Auto-auth bypass warning: {ex.Message}");
+        }
+
+        return null;
+    }
+
+
 
 }
