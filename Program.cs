@@ -238,52 +238,141 @@ public class Program
             AnsiConsole.Write(new Padder(tipPanel));
         }
     }
-
-
     private static void RunAutomatedPipelineTest()
     {
         AnsiConsole.Clear();
-        AnsiConsole.Write(new Rule("[yellow]🧪 SDE Automated Integration Test[/]").LeftJustified());
+        AnsiConsole.Write(new Rule("[yellow]🧪 SDE Comprehensive Master Test Matrix (All Phases)[/]").LeftJustified());
 
-        // FIXED: Force the test file path to point to the literal project root folder, bypassing bin/ filters
-        string projectRoot = Directory.GetCurrentDirectory();
         string testFile = "SdeCoreApp.cs";
+        string toxicFile = "broken_syntax_error.tmp";
+        string stashFile = "experimental_feature.cs";
+        string projectRoot = Directory.GetCurrentDirectory();
         string fullTestFilePath = Path.Combine(projectRoot, testFile);
+        string fullToxicFilePath = Path.Combine(projectRoot, toxicFile);
+        string fullStashFilePath = Path.Combine(projectRoot, stashFile);
 
-        // Test 1: Check baseline status tracking
-        AnsiConsole.MarkupLine("\n[blue][[Step 1/4]][/] Verifying repository health check...");
-        var initResult = GitEngine.CheckHealthAndStage("");
-        RenderOutput(initResult);
+        // =======================================================
+        // METRIC 1: LOCAL WORKFLOW LOOP (Commands 1-6)
+        // =======================================================
+        AnsiConsole.Write(new Padder(new Rule("[cyan]1. Local Basics Workflow[/]").LeftJustified().RuleStyle("grey"), new Padding(0, 1, 0, 0)));
 
-        // Test 2: Create a mock modified file on disk safely outside bin/
-        AnsiConsole.MarkupLine($"\n[blue][[Step 2/4]][/] Generating uncommitted asset: {testFile}");
-        File.WriteAllText(fullTestFilePath, "// Modern SDE C# Pipeline Code Base");
-        var statusResult = GitEngine.CheckHealthAndStage("");
-        RenderOutput(statusResult);
+        AnsiConsole.MarkupLine("[blue][[Step 1/20]][/] Running baseline health check status...");
+        RenderOutput(GitEngine.CheckHealthAndStage(""));
 
-        // Test 3: Run Staging Engine
-        AnsiConsole.MarkupLine($"\n[blue][[Step 3/4]][/] Attempting to stage {testFile}...");
-        var stageResult = GitEngine.CheckHealthAndStage(testFile);
-        RenderOutput(stageResult);
+        AnsiConsole.MarkupLine("[blue][[Step 2/20]][/] Initializing repository checks...");
+        RenderOutput(GitEngine.CheckHealthAndStage(""));
 
-        // Test 4: Execute Commit Engine checkpoint
-        AnsiConsole.MarkupLine("\n[blue][[Step 4/4]][/] Saving stable snapshot checkpoint...");
-        var commitResult = GitEngine.CommitChanges("Feat: Implement SDE Core logic pipeline");
-        RenderOutput(commitResult);
+        AnsiConsole.MarkupLine($"[blue][[Step 3/20]][/] Writing fresh tracking asset: {testFile}");
+        File.WriteAllText(fullTestFilePath, "// Core software architecture branch base");
+        RenderOutput(GitEngine.CheckHealthAndStage(""));
 
-        // Test 5: Verify log outputs
-        AnsiConsole.MarkupLine("\n[blue][[Verification]][/] Printing commit history logs:");
-        var logResult = GitEngine.GetCommitLog();
-        RenderOutput(logResult);
+        AnsiConsole.MarkupLine($"[blue][[Step 4/20]][/] Staging {testFile} to preparation index...");
+        RenderOutput(GitEngine.CheckHealthAndStage(testFile));
 
-        // Clean up the generated test file so it doesn't leave clutter
+        AnsiConsole.MarkupLine("[blue][[Step 5/20]][/] Committing staged changes to project history timeline...");
+        RenderOutput(GitEngine.CommitChanges("Feat: Establish main framework base"));
+
+        AnsiConsole.MarkupLine("[blue][[Step 6/20]][/] Verifying baseline commit logs...");
+        RenderOutput(GitEngine.GetCommitLog());
+
+
+        // =======================================================
+        // METRIC 2: BRANCHING & ISOLATION SYSTEM (Commands 7-11)
+        // =======================================================
+        AnsiConsole.Write(new Padder(new Rule("[cyan]2. Branching & Context Switching[/]").LeftJustified().RuleStyle("grey"), new Padding(0, 1, 0, 0)));
+
+        AnsiConsole.MarkupLine("[blue][[Step 7/20]][/] Spawning isolated branch: feature-login...");
+        RenderOutput(GitEngine.CreateBranch("feature-login"));
+
+        AnsiConsole.MarkupLine("[blue][[Step 8/20]][/] Querying branch index checklist matrix...");
+        RenderOutput(GitEngine.ListBranches());
+
+        AnsiConsole.MarkupLine("[blue][[Step 9/20]][/] Switching workspace context to branch: feature-login...");
+        RenderOutput(GitEngine.SwitchToBranch("feature-login"));
+
+        AnsiConsole.MarkupLine("[blue][[Step 10/20]][/] Writing code on branch and testing merge preview setup...");
+        File.WriteAllText(fullStashFilePath, "// Branch experimental logic");
+        RenderOutput(GitEngine.CheckHealthAndStage(stashFile));
+        RenderOutput(GitEngine.CommitChanges("Feat: Add login layout"));
+
+        // Switch back to master to prepare for merge simulation
+        GitEngine.SwitchToBranch("master");
+        AnsiConsole.MarkupLine("[blue][[Step 11]][/] Merging 'feature-login' cleanly back into master pipeline...");
+        RenderOutput(GitEngine.MergeBranch("feature-login"));
+
+
+        // =======================================================
+        // METRIC 3: DISASTER RECOVERY & SAFETY NETS (Commands 12-15)
+        // =======================================================
+        AnsiConsole.Write(new Padder(new Rule("[cyan]3. Disaster Recovery & Safety Nets[/]").LeftJustified().RuleStyle("grey"), new Padding(0, 1, 0, 0)));
+
+        AnsiConsole.MarkupLine($"[blue][[Step 12/20]][/] Simulating tracking pollution (Writing {toxicFile})...");
+        File.WriteAllText(fullToxicFilePath, "toxic corrupted syntax code entry");
+        RenderOutput(GitEngine.CheckHealthAndStage(""));
+
+        AnsiConsole.MarkupLine("[blue][[Step 13/20]][/] Executing git clean routine to purge untracked disk files...");
+        RenderOutput(GitEngine.CleanRepository());
+
+        bool cleanPassed = !File.Exists(fullToxicFilePath);
+        AnsiConsole.MarkupLine($"  [grey]↳ File removal assertion check:[/] {(cleanPassed ? "[green]SUCCESS (File Purged)[/]" : "[red]FAILED (File Leaked)[/]")}");
+
+        // Track edit modification to check restoration tools
+        if (File.Exists(fullTestFilePath))
+        {
+            File.AppendAllText(fullTestFilePath, "\n// Accidental broken edit string entry");
+
+            AnsiConsole.MarkupLine($"\n[blue][[Step 14/20]][/] Staging broken file edits for reset simulation...");
+            RenderOutput(GitEngine.CheckHealthAndStage(testFile));
+
+            AnsiConsole.MarkupLine($"[blue][[Step 15/20]][/] Running git reset on {testFile} to unstage it...");
+            RenderOutput(GitEngine.UnstageFile(testFile));
+
+            AnsiConsole.MarkupLine($"[blue][[Step 16/20]][/] Restoring original code state via git restore...");
+            RenderOutput(GitEngine.RestoreFile(testFile));
+        }
+
+
+        // =======================================================
+        // METRIC 4: INTEGRATION & STASHING SHELVES (Advanced Lifecycle)
+        // =======================================================
+        AnsiConsole.Write(new Padder(new Rule("[cyan]4. Integration & Workspace Stashing[/]").LeftJustified().RuleStyle("grey"), new Padding(0, 1, 0, 0)));
+
+        if (File.Exists(fullTestFilePath)) File.AppendAllText(fullTestFilePath, "\n// Half-finished experimental code block");
+        AnsiConsole.MarkupLine("[blue][[Step 17/20]][/] Shelving uncommitted changes to temporary stash shelf...");
+        RenderOutput(GitEngine.StashChanges());
+
+
+        // =======================================================
+        // METRIC 5: REMOTE MOCK NETWORK CLOUD LOOP (Commands 16-20)
+        // =======================================================
+        AnsiConsole.Write(new Padder(new Rule("[cyan]5. Remote Cloud Collaboration[/]").LeftJustified().RuleStyle("grey"), new Padding(0, 1, 0, 0)));
+
+        AnsiConsole.MarkupLine("[blue][[Step 18/20]][/] Simulating target framework clone operation to backup directory...");
+        string backupFolder = Path.Combine(projectRoot, "StudentGit_Backup");
+        if (Directory.Exists(backupFolder)) Directory.Delete(backupFolder, true);
+        RenderOutput(GitEngine.CloneRepository("https://github.com", backupFolder));
+
+        AnsiConsole.MarkupLine("[blue][[Step 19/20]][/] Linking local repo up to a GitHub server endpoint URL...");
+        try
+        {
+            using var repo = new LibGit2Sharp.Repository(projectRoot);
+            if (repo.Network.Remotes["origin"] != null) repo.Network.Remotes.Remove("origin");
+        }
+        catch { }
+        RenderOutput(GitEngine.AddRemote("https://github.com"));
+
+        AnsiConsole.MarkupLine("\n[blue][[Step 20/20]][/] Pinging tracking servers to fetch upstream change metadata logs...");
+        RenderOutput(GitEngine.FetchUpdates());
+
+        // Final disk space hygiene cleanup routine
         try
         {
             if (File.Exists(fullTestFilePath)) File.Delete(fullTestFilePath);
+            if (File.Exists(fullToxicFilePath)) File.Delete(fullToxicFilePath);
+            if (File.Exists(fullStashFilePath)) File.Delete(fullStashFilePath);
+            if (Directory.Exists(backupFolder)) Directory.Delete(backupFolder, true);
         }
-        catch { /* Dust off clean up errors */ }
+        catch { }
     }
-
-
 
 }
