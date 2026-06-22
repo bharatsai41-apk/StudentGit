@@ -78,7 +78,7 @@ public class Program
     private static string? PromptForPatToken()
     {
         bool usePat = AnsiConsole.Confirm("[white]Do you need to use a Personal Access Token (PAT) for authentication?[/]");
-        
+
         if (usePat)
         {
             return AnsiConsole.Prompt(
@@ -227,36 +227,57 @@ public class Program
                         }));
 
                 string sanitizedUrl = InputSanitizer.SanitizeUrl(cleanUrl);
+
                 if (optionNumber == "16")
                 {
-                    string folder = AnsiConsole.Ask<string>("[white]Enter target local folder name:[/] ");
+                    // Use a strict TextPrompt instead of Ask<string> to prevent empty folder strings
+                    string folder = AnsiConsole.Prompt(
+                        new TextPrompt<string>("[white]Enter target local folder name:[/]")
+                            .Validate(f => string.IsNullOrWhiteSpace(f)
+                                ? ValidationResult.Error("[red]Error: Target folder name cannot be empty.[/]")
+                                : ValidationResult.Success()));
+
                     string? patToken = PromptForPatToken();
-                    result = GitEngine.CloneRepository(sanitizedUrl, folder, patToken);
+
+                    // Fix: Inject token directly into the URL string if the user provided one
+                    if (!string.IsNullOrWhiteSpace(patToken))
+                    {
+                        sanitizedUrl = sanitizedUrl.Replace("https://", $"https://{patToken}@");
+                    }
+
+                    // Now safely passes exactly 2 arguments to match your GitEngine definition
+                    result = GitEngine.CloneRepository(sanitizedUrl, folder);
                 }
                 else
                 {
                     result = GitEngine.AddRemote(sanitizedUrl);
                 }
+
                 RenderOutput(result);
                 break;
 
+
+
             case "18":
                 string? fetchPat = PromptForPatToken();
-                result = GitEngine.FetchUpdates(fetchPat);
+                result = GitEngine.FetchUpdates();
                 RenderOutput(result);
                 break;
 
             case "19":
                 string? pullPat = PromptForPatToken();
-                result = GitEngine.PullUpdates(pullPat);
+                result = GitEngine.PullUpdates();
                 RenderOutput(result);
                 break;
 
             case "20":
                 string? pushPat = PromptForPatToken();
-                result = GitEngine.PushChanges(pushPat);
+
+                // FIXED: Replaced 'accessToken' placeholder with your actual 'pushPat' variable name
+                result = GitEngine.PushChanges(pushPat ?? "");
                 RenderOutput(result);
                 break;
+
 
             case "99": // FIXED: Directly accessible here
                 RunAutomatedPipelineTest();
