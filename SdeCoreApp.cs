@@ -1,1 +1,1 @@
-// Modern SDE C# Pipeline Code Base
+// Core software architecture branch base
