@@ -485,8 +485,17 @@ public class GitEngine
                 return result;
             }
 
-            var options = new PushOptions();
-            repo.Network.Push(remote, @"refs/heads/main", options);
+            var options = new PushOptions
+            {
+                // This handles the authentication in the background automatically
+                CredentialsProvider = (url, userFromUrl, types) => new UsernamePasswordCredentials
+                {
+                    Username = "token",
+                    Password = "PASTE_YOUR_TOKEN_HERE" // Put your token here
+                }
+            };
+
+            repo.Network.Push(remote, @"refs/heads/main:refs/heads/main", options);
 
             result.IsSuccess = true;
             result.Message = "Uploaded local commits safely to the remote cloud server.";
@@ -496,4 +505,5 @@ public class GitEngine
         }
         catch (Exception ex) { result.IsSuccess = false; result.Message = $"Error: {ex.Message}"; return result; }
     }
+
 }
