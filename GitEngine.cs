@@ -15,6 +15,20 @@ public class GitResult
 public class GitEngine
 {
     private static readonly string RepoPath = Directory.GetCurrentDirectory();
+    private static string? _patToken = null;  // Store the PAT token
+
+    // Method to set the PAT token once at the start
+    public static void SetAuthToken(string patToken)
+    {
+        _patToken = patToken;
+    }
+
+    // Method to clear the PAT token for security
+    public static void ClearAuthToken()
+    {
+        _patToken = null;
+    }
+
     // this is the workspace one we shall do git init,git status,git add here
     // 1 & 2 & 4. git init / git status / git add [file]
     public static GitResult CheckHealthAndStage(string targetAsset)
@@ -394,12 +408,25 @@ public class GitEngine
         catch (Exception ex) { result.IsSuccess = false; result.Message = $"Error: {ex.Message}"; return result; }
     }
     // 16. git clone [url]
-    public static GitResult CloneRepository(string remoteUrl, string targetFolder)
+    public static GitResult CloneRepository(string remoteUrl, string targetFolder, string? patToken = null)
     {
         var result = new GitResult();
         try
         {
-            Repository.Clone(remoteUrl, targetFolder);
+            var options = new CloneOptions();
+
+            // Add credentials if PAT is provided
+            if (!string.IsNullOrEmpty(patToken))
+            {
+                options.CredentialsProvider = (_url, _user, _cred) =>
+                    new UsernamePasswordCredentials
+                    {
+                        Username = "oauth2",  // GitHub uses "oauth2" for PAT
+                        Password = patToken
+                    };
+            }
+
+            Repository.Clone(remoteUrl, targetFolder, options);
             result.IsSuccess = true;
             result.Message = $"Successfully downloaded repository to '{targetFolder}'.";
             result.StandardGitCommand = $"git clone {remoteUrl}";
@@ -426,8 +453,8 @@ public class GitEngine
         catch (Exception ex) { result.IsSuccess = false; result.Message = $"Error: {ex.Message}"; return result; }
     }
 
-    // 18. git fetch
-    public static GitResult FetchUpdates()
+    // 18. git fetch with PAT support
+    public static GitResult FetchUpdates(string? patToken = null)
     {
         var result = new GitResult();
         using var repo = new Repository(RepoPath);
@@ -440,7 +467,22 @@ public class GitEngine
                 result.Message = "No remote server linked. Run 'git remote add' first.";
                 return result;
             }
-            Commands.Fetch(repo, remote.Name, new string[0], null, null);
+
+            var options = new FetchOptions();
+
+            // Use provided token or fall back to stored token
+            string? tokenToUse = patToken ?? _patToken;
+            if (!string.IsNullOrEmpty(tokenToUse))
+            {
+                options.CredentialsProvider = (_url, _user, _cred) =>
+                    new UsernamePasswordCredentials
+                    {
+                        Username = "oauth2",
+                        Password = tokenToUse
+                    };
+            }
+
+            Commands.Fetch(repo, remote.Name, new string[0], options);
             result.IsSuccess = true;
             result.Message = "Fetched the latest change logs from the remote repository.";
             result.StandardGitCommand = "git fetch";
@@ -450,8 +492,8 @@ public class GitEngine
         catch (Exception ex) { result.IsSuccess = false; result.Message = $"Error: {ex.Message}"; return result; }
     }
 
-    // 19. git pull
-    public static GitResult PullUpdates()
+    // 19. git pull with PAT support
+    public static GitResult PullUpdates(string? patToken = null)
     {
         var result = new GitResult();
         using var repo = new Repository(RepoPath);
@@ -459,6 +501,19 @@ public class GitEngine
         {
             var author = new Signature("Student Dev", "student@example.com", DateTimeOffset.Now);
             var options = new PullOptions();
+
+            // Use provided token or fall back to stored token
+            string? tokenToUse = patToken ?? _patToken;
+            if (!string.IsNullOrEmpty(tokenToUse))
+            {
+                options.FetchOptions.CredentialsProvider = (_url, _user, _cred) =>
+                    new UsernamePasswordCredentials
+                    {
+                        Username = "oauth2",  // GitHub uses "oauth2" for PAT
+                        Password = tokenToUse
+                    };
+            }
+
             MergeResult mergeResult = Commands.Pull(repo, author, options);
 
             result.IsSuccess = true;
@@ -470,8 +525,8 @@ public class GitEngine
         catch (Exception ex) { result.IsSuccess = false; result.Message = $"Error: {ex.Message}"; return result; }
     }
 
-    // 20. git push
-    public static GitResult PushChanges()
+    // 20. git push with PAT support
+    public static GitResult PushChanges(string? patToken = null)
     {
         var result = new GitResult();
         using var repo = new Repository(RepoPath);
@@ -486,6 +541,19 @@ public class GitEngine
             }
 
             var options = new PushOptions();
+
+            // Use provided token or fall back to stored token
+            string? tokenToUse = patToken ?? _patToken;
+            if (!string.IsNullOrEmpty(tokenToUse))
+            {
+                options.CredentialsProvider = (_url, _user, _cred) =>
+                    new UsernamePasswordCredentials
+                    {
+                        Username = "oauth2",  // GitHub uses "oauth2" for PAT
+                        Password = tokenToUse
+                    };
+            }
+
             repo.Network.Push(remote, @"refs/heads/main", options);
 
             result.IsSuccess = true;
